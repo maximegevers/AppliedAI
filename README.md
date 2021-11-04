@@ -1,1 +1,3 @@
-# AppliedAI-
+# AppliedAI
+
+Our Applied AI project. 
