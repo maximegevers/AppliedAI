@@ -3,16 +3,21 @@ import torch
 import matplotlib.pyplot as plt
 import torchvision.transforms as transforms
 from Model import Model
+from PIL import Image
 
-def predict_batch(model, batch, labels=['cloth', 'ffp2', 'surgical', 'without'], device="cpu"):
+def predict_batch(model, valid_loader, device="cpu"):
     """
     Given a batch of images, predict the class of each image.
     """
+    labels=['cloth', 'ffp2', 'surgical', 'without']
+    preds = []
+    model = model.to(device)
     model.eval()
     with torch.no_grad():
-        batch = batch.to(device)
-        output = model(batch)    
-    preds = output.argmax(dim=1).cpu().numpy()
+        for i, (image, label) in enumerate(valid_loader):
+            image = image.to(device)
+            pred = model(image)
+            preds.extend(torch.argmax(pred, dim=1).cpu().numpy())
     return [labels[pred] for pred in preds]
 
 def predict_image(model, image, labels=['cloth', 'ffp2', 'surgical', 'without'], device="cpu"):
@@ -35,9 +40,9 @@ if __name__ == "__main__":
         'model_checkpoints': '/Users/shubhampatel/Documents/Comp 6721/Project/model/model.pt'
     }
 
-    image = cv2.imread("/Users/shubhampatel/Downloads/IMG_5440.jpg")
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    plt.imshow(image)
+    image = Image.open("/Users/shubhampatel/Downloads/4347cb7ad1.jpg")
+    # image = transforms.F.to_tensor(image)
+    # plt.imshow(image)
     transform = transforms.Compose(
         [transforms.ToTensor(),
         transforms.Resize((224,224)),

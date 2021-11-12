@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,16 +8,19 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset
 from torchvision.datasets import ImageFolder
 
-from Model import ConvModel
+from Model import Model
 from trainer import Trainer
+from predictions import predict_batch
+from sklearn.metrics import classification_report
+from sklearn import metrics
 
 
-def get_data(images_path, val_split=0.25):
+def get_data(images_path, val_split=0.15, test_split=0.1):
     """
     Loads the data from the given path and splits it into training and validation sets.
     :param images_path: The path to the images.
     :param val_split: The percentage of the data to be used for validation.
-    :return: A tuple containing the training and validation sets.
+    :return: A tuple containing the training validation and testing sets.
     """
     transform = transforms.Compose(
         [transforms.ToTensor(),
@@ -26,10 +29,16 @@ def get_data(images_path, val_split=0.25):
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])]
         )
     dataset = ImageFolder(images_path, transform=transform) 
-    train_idx, val_idx = train_test_split(list(range(len(dataset))), test_size=val_split)
-    train = Subset(dataset, train_idx)
+    train_test_idx, val_idx = train_test_split(list(range(len(dataset))), test_size=val_split)
+    train_test = Subset(dataset, train_test_idx)
     valid = Subset(dataset, val_idx)
-    return train, valid
+
+
+    train_idx, test_idx = train_test_split(list(range(len(train_test))), test_size=test_split)
+    train = Subset(train_test, train_idx)
+    test = Subset(train_test, test_idx)
+
+    return train, valid, test
 
 if __name__ ==  "__main__":
     # configurations
@@ -47,12 +56,13 @@ if __name__ ==  "__main__":
     }
 
     # get data for training and validation
-    train_data, valid_data = get_data(CFG['data_path'])
+    train_data, valid_data, test_data = get_data(CFG['data_path'])
     train_loader = torch.utils.data.DataLoader(train_data, batch_size=CFG['train_BS'], shuffle=True, pin_memory=False)
     valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=CFG['valid_BS'], shuffle=False, pin_memory=False)
+    test_loader = torch.utils.data.DataLoader(test_data, batch_size=CFG['valid_BS'], shuffle=False, pin_memory=False)
 
     # create model
-    model = ConvModel(4)
+    model = Model(4)
     model = model.to(CFG['device'])
 
     criterion = nn.CrossEntropyLoss()
@@ -71,6 +81,7 @@ if __name__ ==  "__main__":
     plt.xlabel('epochs')
     plt.ylabel('loss')
     plt.legend()
+    plt.savefig('loss.png')
     plt.show()
 
     plt.plot(History['train_acc'], label='train')
@@ -78,6 +89,25 @@ if __name__ ==  "__main__":
     plt.xlabel('epochs')
     plt.ylabel('accuracy')
     plt.legend(loc='lower right')
+    plt.savefig('accuracy.png')
     plt.show()
+
+    ypred = predict_batch(model, test_loader, CFG['device'])
+    true = []
+    labels=['cloth', 'ffp2', 'surgical', 'without']
+    for x, y in test_loader:
+        true.extend(y.cpu().numpy())
+    true = [labels[x] for x in true]
+
+    print(classification_report(true, ypred))
+    cm = metrics.confusion_matrix(true, ypred)
+    disp = metrics.ConfusionMatrixDisplay(confusion_matrix=cm, display_labels = labels)
+    disp.plot()
+
+
+
+
+
+
 
 
