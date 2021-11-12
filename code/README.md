@@ -17,5 +17,5 @@ How to start training:<br/>
 -> After the training is completed evaluation will be shown, loss and acccuracy graph would be plotted, also the classification report and confusion matrix would be displayed.<br/>
 
 To run the model on sample of 100 images:<br/>
-python predict_sample --data [data path] --model [model checkpoints path]<br/>
-e.g: python predict_sample --data ../data/ --model model/model.pth
+python predict_sample.py --data [data path] --model [model checkpoints path]<br/>
+e.g: python predict_sample.py --data ../data/ --model model/model.pth
