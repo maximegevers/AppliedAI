@@ -6,6 +6,11 @@ Files:
 -> predict_sample.py: To make predictions on a sample of 100 images.<br/>
 -> prediction.py: To make prediction on a dataloader and single image.<br/>
 
+Training Data: https://drive.google.com/file/d/1dKLFJj4HKse7MqEtYVU0YLE5qSiB6orz/view?usp=sharing  <br/>
+
+Trained Model: https://drive.google.com/file/d/1kVutbrtw-dxn3TZ8wYUJHFHSoi7A1KTu/view?usp=sharing  <br/>
+
+
 How to start training:<br/>
 -> train.py contains CFG dictionary where the necessary changes can be made such as data location, learning rate, where to save model etc.<br/>
 -> After all the changes are made run: python train.py<br/>
