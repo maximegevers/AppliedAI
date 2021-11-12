@@ -10,6 +10,8 @@ Training Data: https://drive.google.com/file/d/1dKLFJj4HKse7MqEtYVU0YLE5qSiB6orz
 
 Trained Model: https://drive.google.com/file/d/1kVutbrtw-dxn3TZ8wYUJHFHSoi7A1KTu/view?usp=sharing  <br/>
 
+Sample Data:  https://drive.google.com/file/d/117csMpuipttW4zsEYkCMLMR4lnNNtsVX/view?usp=sharing <br/>
+
 
 How to start training:<br/>
 -> train.py contains CFG dictionary where the necessary changes can be made such as data location, learning rate, where to save model etc.<br/>
