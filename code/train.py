@@ -51,7 +51,7 @@ if __name__ ==  "__main__":
         'lr': 0.01,
         'grad_clip': 0.1,
         'weight_decay': 0.01,
-        'epochs': 1,
+        'epochs': 30,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
         'save_model_at': '/content/',
         'early_stopping': 3,
