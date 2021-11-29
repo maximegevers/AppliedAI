@@ -138,7 +138,7 @@ class Trainer:
                         'model': self.model.state_dict(),
                         'optimizer': self.optimizer.state_dict()
                     }
-                    model_path_1 = '{}model_{}.pt'.format(model_path, epoch+1)
+                    model_path_1 = '{}model_{}_fold{}.pt'.format(model_path, epoch+1, fold)
                     torch.save(checkpoint, model_path_1)
             
             if self.scheduler is not None:

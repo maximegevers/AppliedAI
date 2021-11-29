@@ -1,11 +1,11 @@
- import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
-from torch.utils.data import Subset
+from torch.utils.data import Subset, ConcatDataset
 from torchvision.datasets import ImageFolder
 
 from Model import Model
@@ -13,6 +13,8 @@ from trainer import Trainer
 from predictions import predict_batch
 from sklearn.metrics import classification_report
 from sklearn import metrics
+from sklearn.model_selection import KFold
+from sklearn.metrics import accuracy_score, recall_score, f1_score
 
 
 def get_data(images_path, val_split=0.15, test_split=0.1):
@@ -43,71 +45,85 @@ def get_data(images_path, val_split=0.15, test_split=0.1):
 if __name__ ==  "__main__":
     # configurations
     CFG = {
-        'data_path': '/Users/shubhampatel/Documents/Comp 6721/Project/updated_data',
+        'data_path': '/content/updated_data',
         'train_BS': 64,
         'valid_BS': 64,
         'lr': 0.01,
         'grad_clip': 0.1,
         'weight_decay': 0.01,
-        'epochs': 30,
+        'epochs': 1,
         'device': 'cuda' if torch.cuda.is_available() else 'cpu',
-        'save_model_at': '/Users/shubhampatel/Documents/Comp 6721/Project/model/',
-        'early_stopping': 3
+        'save_model_at': '/content/',
+        'early_stopping': 3,
+        'folds': 10
     }
 
     # get data for training and validation
     train_data, valid_data, test_data = get_data(CFG['data_path'])
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=CFG['train_BS'], shuffle=True, pin_memory=False)
-    valid_loader = torch.utils.data.DataLoader(valid_data, batch_size=CFG['valid_BS'], shuffle=False, pin_memory=False)
     test_loader = torch.utils.data.DataLoader(test_data, batch_size=CFG['valid_BS'], shuffle=False, pin_memory=False)
+    data = ConcatDataset([train_data, valid_data])
 
-    # create model
-    model = Model(4)
-    model = model.to(CFG['device'])
+    kfold = KFold(n_splits=CFG['folds'], shuffle=True)
 
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=CFG['lr'])
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, CFG['lr'], epochs=CFG['epochs'], steps_per_epoch=len(train_loader))
+    accuracy = []
+    recall = []
+    f1 = []
+    histories = []
+    for fold, (train, valid) in enumerate(kfold.split(data)):
 
-    # setup model trainer
-    trainer = Trainer(model=model, device=CFG['device'], optimizer=optimizer, criterion=criterion, scheduler=scheduler)
+        train_sampler = torch.utils.data.SubsetRandomSampler(train)
+        valid_sampler = torch.utils.data.SubsetRandomSampler(valid)
 
-    # start training
-    History = trainer.fit(ES=CFG['early_stopping'], model_path=CFG['save_model_at'], train_loader=train_loader, val_loader=valid_loader, epochs=CFG['epochs'], start_epoch=0, fold=0, train_BS=CFG['train_BS'], valid_BS=CFG['train_BS'], grad_clip=CFG['grad_clip'])
+        train_loader = torch.utils.data.DataLoader(data, sampler=train_sampler, batch_size=CFG['train_BS'], pin_memory=False)
+        valid_loader = torch.utils.data.DataLoader(data, sampler=valid_sampler, batch_size=CFG['valid_BS'], pin_memory=False)
 
-    # plot training history
-    plt.plot(History['train_loss'], label='train')
-    plt.plot(History['val_loss'], label='valid')
-    plt.xlabel('epochs')
-    plt.ylabel('loss')
-    plt.legend()
-    plt.savefig('loss.png')
-    plt.show()
+        model = Model(4)
+        model = model.to(CFG['device'])
 
-    plt.plot(History['train_acc'], label='train')
-    plt.plot(History['val_acc'], label='valid')
-    plt.xlabel('epochs')
-    plt.ylabel('accuracy')
-    plt.legend(loc='lower right')
-    plt.savefig('accuracy.png')
-    plt.show()
+        criterion = nn.CrossEntropyLoss()
+        optimizer = optim.Adam(model.parameters(), lr=CFG['lr'])
+        scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, CFG['lr'], epochs=CFG['epochs'], steps_per_epoch=len(train_loader))
 
-    ypred = predict_batch(model, test_loader, CFG['device'])
-    true = []
-    labels=['cloth', 'ffp2', 'surgical', 'without']
-    for x, y in test_loader:
-        true.extend(y.cpu().numpy())
-    true = [labels[x] for x in true]
+        # setup model trainer
+        trainer = Trainer(model=model, device=CFG['device'], optimizer=optimizer, criterion=criterion, scheduler=scheduler)
 
-    print(classification_report(true, ypred))
-    cm = metrics.confusion_matrix(true, ypred)
-    disp = metrics.ConfusionMatrixDisplay(confusion_matrix=cm, display_labels = labels)
-    disp.plot()
+        print("\n\nFOLD: {}".format(fold))
+        # start training
+        History = trainer.fit(ES=CFG['early_stopping'], model_path=CFG['save_model_at'], train_loader=train_loader, val_loader=valid_loader, epochs=CFG['epochs'], start_epoch=0, fold=fold, train_BS=CFG['train_BS'], valid_BS=CFG['train_BS'], grad_clip=CFG['grad_clip'])
 
+        histories.append(History)
+        plt.plot(History['train_loss'], label='train')
+        plt.plot(History['val_loss'], label='valid')
+        plt.xlabel('epochs')
+        plt.ylabel('loss')
+        plt.legend()
+        plt.savefig('loss.png')
+        plt.show()
 
+        plt.plot(History['train_acc'], label='train')
+        plt.plot(History['val_acc'], label='valid')
+        plt.xlabel('epochs')
+        plt.ylabel('accuracy')
+        plt.legend(loc='lower right')
+        plt.savefig('accuracy.png')
+        plt.show()
 
+        ypred = predict_batch(model, test_loader, CFG['device'])
+        true = []
+        labels=['cloth', 'ffp2', 'surgical', 'without']
+        for x, y in test_loader:
+            true.extend(y.cpu().numpy())
+        true = [labels[x] for x in true]
 
+        print(classification_report(true, ypred))
+        accuracy.append(accuracy_score(true, ypred))
+        recall.append(recall_score(true, ypred, average="weighted"))
+        f1.append(f1_score(true, ypred, average="weighted"))
+        cm = metrics.confusion_matrix(true, ypred)
+        disp = metrics.ConfusionMatrixDisplay(confusion_matrix=cm, display_labels = labels)
+        disp.plot()
 
-
-
-
+        np.save('history.npy', histories)
+        np.save('accuracy.npy', accuracy)
+        np.save('recall.npy', recall)
+        np.save('f1.npy', f1)
