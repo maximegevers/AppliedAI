@@ -8,6 +8,7 @@ from sklearn.model_selection import train_test_split
 from torch.utils.data import Subset, ConcatDataset
 from torchvision.datasets import ImageFolder
 
+import numpy as np
 from Model import Model
 from trainer import Trainer
 from predictions import predict_batch
