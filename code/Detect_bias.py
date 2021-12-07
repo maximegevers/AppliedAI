@@ -105,5 +105,5 @@ if __name__ == "__main__":
     model.load_state_dict(ckpts['model'])
     model.to(CFG['device'])
 
-    # gender_bias(model, CFG['gender_data_path'], CFG['device'])
+    gender_bias(model, CFG['gender_data_path'], CFG['device'])
     age_bias(model, CFG['age_data_path'], CFG['device'])
